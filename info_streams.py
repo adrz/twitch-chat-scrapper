@@ -75,7 +75,7 @@ async def get_channels():
         channels.append(Stream(**dict_elem))
         if len(channels) > 10000:
             break
-        print("pushing to db")
+    print("pushing to db")
     async with async_session() as session:
         async with session.begin():
             session.add_all(channels)
