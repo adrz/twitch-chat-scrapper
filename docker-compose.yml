@@ -14,7 +14,7 @@ services:
       - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
     volumes:
-       - ./rabbitmq_data:/bitnami
+       - rabbitmq-data:/bitnami
     healthcheck:
          test: rabbitmq-diagnostics -q ping
          interval: 30s
@@ -46,3 +46,7 @@ services:
 networks:
     frontend:
         driver: bridge
+
+volumes:
+  rabbitmq-data:
+    driver: local
