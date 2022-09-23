@@ -90,9 +90,11 @@ async def infinite_get_channels():
 
 def main():
     loop = asyncio.get_event_loop()
+    task_db = loop.create_task(create_db())
+    loop.run_until_complete(task_db)
     task = loop.create_task(infinite_get_channels())
     loop.run_until_complete(task)
 
 
 if __name__ == "__main__":
-    pass
+    main()
