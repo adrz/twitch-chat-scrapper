@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import os
 
 import twitch
@@ -43,7 +44,7 @@ class Stream(Base):
     id = Column(Integer, primary_key=True)
     user_login = Column(String)
     game_id = Column(String)
-    timestamp = Column(DateTime, server_default="now()")
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow())
     title = Column(String)
     started_at = Column(DateTime)
     language = Column(String)
