@@ -44,7 +44,7 @@ class Stream(Base):
     id = Column(Integer, primary_key=True)
     user_login = Column(String)
     game_id = Column(String)
-    timestamp = Column(DateTime, default=datetime.datetime.utcnow())
+    timestamp = Column(DateTime)
     title = Column(String)
     started_at = Column(DateTime)
     language = Column(String)
@@ -73,6 +73,7 @@ async def get_channels():
                 "viewer_count",
             )
         }
+        dict_elem["timestamp"] = datetime.datetime.utcnow()
         channels.append(Stream(**dict_elem))
         if len(channels) > 10000:
             break
@@ -81,6 +82,7 @@ async def get_channels():
         async with session.begin():
             session.add_all(channels)
             await session.commit()
+    return
 
 
 async def infinite_get_channels():
