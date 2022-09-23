@@ -119,7 +119,7 @@ class Orchestrator:
         async with connection:
             # Creating a channel
             channel = await connection.channel()
-            await channel.set_qos(prefetch_count=10)
+            await channel.set_qos(prefetch_count=3)
 
             # Declaring queue
             queue = await channel.declare_queue(
