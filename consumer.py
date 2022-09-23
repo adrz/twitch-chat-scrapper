@@ -4,6 +4,7 @@ import datetime
 import os
 import random
 import string
+import time
 from dataclasses import dataclass, field
 from typing import List
 
@@ -178,6 +179,10 @@ class Subscriber:
                 loop.run_until_complete(cors)
             except Exception as exp:
                 print("Error: ", exp)
+                time.sleep(1)
+                self.nickname = "justinfan" + "".join(
+                    [random.choice(string.digits) for _ in range(10)]
+                )
                 continue
         loop.close()
 
