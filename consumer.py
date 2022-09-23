@@ -177,7 +177,7 @@ class Subscriber:
                 )
                 loop.run_until_complete(cors)
             except Exception as exp:
-                print("Error")
+                print("Error: ", exp)
                 continue
         loop.close()
 
@@ -188,11 +188,16 @@ if __name__ == "__main__":
     # channels = args.parse_args().channels.split(",")
     args.add_argument("--num", type=int, default=0)
     args.add_argument("--count", type=int, default=100)
+    args.add_argument("--channel", type=str, default="")
+    channel = args.parse_args().channel
     import pickle
 
     data = pickle.load(open("channels.pkl", "rb"))
-    channels = data[
-        args.parse_args().num : args.parse_args().num + args.parse_args().count
-    ]
+    if channel:
+        channels = [channel]
+    else:
+        channels = data[
+            args.parse_args().num : args.parse_args().num + args.parse_args().count
+        ]
     subscriber = Subscriber(channels=channels)
     subscriber.run()
