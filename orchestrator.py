@@ -107,7 +107,7 @@ class Orchestrator:
                     "message": re.findall(r"PRIVMSG #[a-zA-Z0-9_]+ :(.+)\r\n$", msg)[0],
                 }
                 self.buffer_data.append(data)
-                if len(self.buffer_data) > 500:
+                if len(self.buffer_data) > 1500:
                     await push_to_db(self.buffer_data)
                     self.buffer_data = []
 
