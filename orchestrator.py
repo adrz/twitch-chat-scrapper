@@ -1,16 +1,27 @@
 import asyncio
+import os
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List
 
 from aio_pika import DeliveryMode, Message, connect
 from aio_pika.abc import AbstractIncomingMessage
+from dotenv import load_dotenv
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+load_dotenv()
+RABBITMQ_USERNAME = os.getenv("RABBITMQ_USERNAME")
+RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+
 Base = declarative_base()
-engine = create_async_engine("sqlite+aiosqlite:///./db.sqlite3", echo=False)
+engine = create_async_engine(
+    f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@0.0.0.0/twitch",
+    echo=False,
+)
 async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
@@ -101,7 +112,9 @@ class Orchestrator:
                     self.buffer_data = []
 
     async def consumer(self) -> None:
-        connection = await connect("amqp://admin:admin@localhost")
+        connection = await connect(
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@localhost"
+        )
 
         async with connection:
             # Creating a channel
@@ -123,7 +136,9 @@ class Orchestrator:
 
     async def producer(self) -> None:
         # Perform connection
-        connection = await connect("amqp://admin:admin@localhost")
+        connection = await connect(
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@localhost"
+        )
         async with connection:
             # Creating a channel
             channel = await connection.channel()

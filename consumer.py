@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import datetime
+import os
 import random
 import string
 from dataclasses import dataclass, field
@@ -8,6 +9,11 @@ from typing import List
 
 from aio_pika import DeliveryMode, Message, connect
 from aio_pika.abc import AbstractIncomingMessage
+from dotenv import load_dotenv
+
+load_dotenv()
+RABBITMQ_USERNAME = os.getenv("RABBITMQ_USERNAME")
+RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD")
 
 
 @dataclass
@@ -111,7 +117,9 @@ class Subscriber:
                 continue
 
     async def produce(self, message_body) -> None:
-        connection = await connect("amqp://admin:admin@localhost")
+        connection = await connect(
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@localhost"
+        )
         async with connection:
             # Creating a channel
             channel = await connection.channel()
@@ -132,7 +140,9 @@ class Subscriber:
             print(f" [x] Sent {message_body!r}")
 
     async def consume(self) -> None:
-        connection = await connect("amqp://admin:admin@localhost")
+        connection = await connect(
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@localhost"
+        )
 
         async with connection:
             # Creating a channel
