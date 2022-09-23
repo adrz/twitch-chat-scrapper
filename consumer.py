@@ -127,7 +127,7 @@ class Subscriber:
 
             message = Message(
                 message_body,
-                timestamp=datetime.datetime.now(),
+                timestamp=datetime.datetime.utcnow(),
                 headers={"x-id": self._id},
                 delivery_mode=DeliveryMode.PERSISTENT,
             )
