@@ -32,6 +32,7 @@ class Subscriber:
     n_channels: int = 0
     n_messages_last: int = 0
     last_message: bytes = b""
+    buffer: list = field(default_factory=list)
 
     async def send(self, message: str) -> None:
         self.writer.write(f"{message}\r\n".encode())
@@ -97,13 +98,17 @@ class Subscriber:
 
         while True:
             data = await self.reader.readuntil(b"\r\n")
+            self.buffer.append(data)
             self.n_messages += 1
             print(data)
             if data.startswith(b"PING"):
                 parsed = data.decode().split(" ")[-1]
                 await self.send(f"PONG {parsed}")
             else:
-                await self.produce(data)
+                if len(self.buffer) > 5:
+                    data_to_produce = b"".join(self.buffer)
+                    await self.produce(data_to_produce)
+                    self.buffer = []
 
     async def infinite_read_chat(self):
         n_failure = 0

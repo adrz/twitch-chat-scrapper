@@ -82,34 +82,36 @@ class Orchestrator:
             # print(f"     Message body is: {message.body!r}")
             # print(f"     Message body is: {message.headers['x-id']}")
             # print(f"     Message body is: {message.timestamp}")
-            if message.body.startswith(b"SUBSCRIBE"):
-                print("got new subscriber")
-                id_subscribers = str(message.body.split(b" ")[1], "utf-8")
-                self.subscribers[id_subscribers] = SubscriberInfo()
-            msg = message.body.decode()
-            is_privmsg = re.match(
-                r"^:[a-zA-Z0-9_]+\![a-zA-Z0-9_]+@[a-zA-Z0-9_]+"
-                r"\.tmi\.twitch\.tv "
-                r"PRIVMSG #[a-zA-Z0-9_]+ :.+$",
-                msg,
-            )
-            if is_privmsg:
-                data = {
-                    "channel": re.findall(
-                        r"^:.+![a-zA-Z0-9_]+"
-                        r"@[a-zA-Z0-9_]+"
-                        r".+ "
-                        r"PRIVMSG (.*?) :",
-                        msg,
-                    )[0],
-                    "timestamp": message.timestamp,
-                    "nick": re.findall(r"^:([a-zA-Z0-9_]+)!", msg)[0],
-                    "message": re.findall(r"PRIVMSG #[a-zA-Z0-9_]+ :(.+)\r\n$", msg)[0],
-                }
-                self.buffer_data.append(data)
-                if len(self.buffer_data) > 1500:
-                    await push_to_db(self.buffer_data)
-                    self.buffer_data = []
+            messages = message.body.decode("utf-8").split("\r\n")
+            for message in messages:
+                if message.body.startswith(b"SUBSCRIBE"):
+                    print("got new subscriber")
+                    id_subscribers = str(message.body.split(b" ")[1], "utf-8")
+                    self.subscribers[id_subscribers] = SubscriberInfo()
+                msg = message.body.decode()
+                is_privmsg = re.match(
+                    r"^:[a-zA-Z0-9_]+\![a-zA-Z0-9_]+@[a-zA-Z0-9_]+"
+                    r"\.tmi\.twitch\.tv "
+                    r"PRIVMSG #[a-zA-Z0-9_]+ :.+$",
+                    msg,
+                )
+                if is_privmsg:
+                    data = {
+                        "channel": re.findall(
+                            r"^:.+![a-zA-Z0-9_]+"
+                            r"@[a-zA-Z0-9_]+"
+                            r".+ "
+                            r"PRIVMSG (.*?) :",
+                            msg,
+                        )[0],
+                        "timestamp": message.timestamp,
+                        "nick": re.findall(r"^:([a-zA-Z0-9_]+)!", msg)[0],
+                        "message": re.findall(r"PRIVMSG #[a-zA-Z0-9_]+ :(.+)$", msg)[0],
+                    }
+                    self.buffer_data.append(data)
+                    if len(self.buffer_data) > 1500:
+                        await push_to_db(self.buffer_data)
+                        self.buffer_data = []
 
     async def consumer(self) -> None:
         connection = await connect(
