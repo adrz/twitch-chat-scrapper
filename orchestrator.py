@@ -84,11 +84,11 @@ class Orchestrator:
             # print(f"     Message body is: {message.timestamp}")
             messages = message.body.decode("utf-8").split("\r\n")
             for message in messages:
-                if message.body.startswith(b"SUBSCRIBE"):
+                if message.startswith(b"SUBSCRIBE"):
                     print("got new subscriber")
                     id_subscribers = str(message.body.split(b" ")[1], "utf-8")
                     self.subscribers[id_subscribers] = SubscriberInfo()
-                msg = message.body.decode()
+                msg = message.decode()
                 is_privmsg = re.match(
                     r"^:[a-zA-Z0-9_]+\![a-zA-Z0-9_]+@[a-zA-Z0-9_]+"
                     r"\.tmi\.twitch\.tv "
