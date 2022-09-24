@@ -83,17 +83,17 @@ class Orchestrator:
             # print(f"     Message body is: {message.headers['x-id']}")
             # print(f"     Message body is: {message.timestamp}")
             messages = message.body.decode("utf-8").split("\r\n")
-            for message in messages:
-                if message.startswith(b"SUBSCRIBE"):
+            for msg in messages:
+                if msg.startswith(b"SUBSCRIBE"):
                     print("got new subscriber")
-                    id_subscribers = str(message.body.split(b" ")[1], "utf-8")
+                    id_subscribers = str(msg.split(b" ")[1], "utf-8")
                     self.subscribers[id_subscribers] = SubscriberInfo()
-                msg = message.decode()
+                msg_utf8 = msg.decode()
                 is_privmsg = re.match(
                     r"^:[a-zA-Z0-9_]+\![a-zA-Z0-9_]+@[a-zA-Z0-9_]+"
                     r"\.tmi\.twitch\.tv "
                     r"PRIVMSG #[a-zA-Z0-9_]+ :.+$",
-                    msg,
+                    msg_utf8,
                 )
                 if is_privmsg:
                     data = {
@@ -102,11 +102,13 @@ class Orchestrator:
                             r"@[a-zA-Z0-9_]+"
                             r".+ "
                             r"PRIVMSG (.*?) :",
-                            msg,
+                            msg_utf8,
                         )[0],
                         "timestamp": message.timestamp,
-                        "nick": re.findall(r"^:([a-zA-Z0-9_]+)!", msg)[0],
-                        "message": re.findall(r"PRIVMSG #[a-zA-Z0-9_]+ :(.+)$", msg)[0],
+                        "nick": re.findall(r"^:([a-zA-Z0-9_]+)!", msg_utf8)[0],
+                        "message": re.findall(
+                            r"PRIVMSG #[a-zA-Z0-9_]+ :(.+)$", msg_utf8
+                        )[0],
                     }
                     self.buffer_data.append(data)
                     if len(self.buffer_data) > 1500:
