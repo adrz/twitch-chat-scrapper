@@ -82,9 +82,8 @@ class Orchestrator:
             # print(f"     Message body is: {message.body!r}")
             # print(f"     Message body is: {message.headers['x-id']}")
             # print(f"     Message body is: {message.timestamp}")
-            messages = message.body.decode("utf-8").split("\r\n")
+            messages = message.body.split(b"\r\n")
             for msg in messages:
-                print(msg)
                 if msg.startswith(b"SUBSCRIBE"):
                     print("got new subscriber")
                     id_subscribers = str(msg.split(b" ")[1], "utf-8")
