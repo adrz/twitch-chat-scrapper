@@ -88,7 +88,7 @@ async def get_channels():
 async def infinite_get_channels():
     while True:
         await get_channels()
-        await asyncio.sleep(60 * 5)
+        await asyncio.sleep(60 * 10)
 
 
 def main():
