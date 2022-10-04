@@ -2,9 +2,7 @@ FROM python:3.10.7-buster
 
 RUN mkdir /app
 WORKDIR /app
-COPY requirements-consumer.txt /app/requirements.txt
-COPY .env /app/.env
-COPY generate_pickle.py launch.sh consumer.py /app
+COPY .env requirements-consumer.txt generate_pickle.py launch.sh consumer.py /app/
 
-RUN pip install -r requirements.txt
+RUN pip install -r requirements-consumer.txt
 CMD ["bash", "launch.sh"]
