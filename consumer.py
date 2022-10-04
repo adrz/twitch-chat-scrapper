@@ -124,7 +124,7 @@ class Subscriber:
 
     async def produce(self, message_body) -> None:
         connection = await connect(
-            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@localhost"
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@0.0.0.0"
         )
         async with connection:
             # Creating a channel
