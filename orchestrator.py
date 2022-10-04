@@ -93,8 +93,9 @@ class Orchestrator:
             messages = message.body.split(b"\r\n")
             for msg in messages:
                 if msg.startswith(b"SUBSCRIBE"):
-                    print("got new subscriber")
                     id_subscribers = str(msg.split(b" ")[1], "utf-8")
+                    timestamp = message.timestamp
+                    print(f"{timestamp}: got new subscriber {id_subscribers}")
                     self.subscribers[id_subscribers] = SubscriberInfo()
                 if msg.startswith(b"STATS"):
                     try:
