@@ -1,16 +1,27 @@
 import asyncio
+import os
 import re
 from dataclasses import dataclass, field
 from typing import Dict, List
 
 from aio_pika import DeliveryMode, Message, connect
 from aio_pika.abc import AbstractIncomingMessage
+from dotenv import load_dotenv
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+load_dotenv()
+RABBITMQ_USERNAME = os.getenv("RABBITMQ_USERNAME")
+RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+
 Base = declarative_base()
-engine = create_async_engine("sqlite+aiosqlite:///./db.sqlite3", echo=False)
+engine = create_async_engine(
+    f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@0.0.0.0/twitch",
+    echo=False,
+)
 async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
@@ -71,37 +82,43 @@ class Orchestrator:
             # print(f"     Message body is: {message.body!r}")
             # print(f"     Message body is: {message.headers['x-id']}")
             # print(f"     Message body is: {message.timestamp}")
-            if message.body.startswith(b"SUBSCRIBE"):
-                print("got new subscriber")
-                id_subscribers = str(message.body.split(b" ")[1], "utf-8")
-                self.subscribers[id_subscribers] = SubscriberInfo()
-            msg = message.body.decode()
-            is_privmsg = re.match(
-                r"^:[a-zA-Z0-9_]+\![a-zA-Z0-9_]+@[a-zA-Z0-9_]+"
-                r"\.tmi\.twitch\.tv "
-                r"PRIVMSG #[a-zA-Z0-9_]+ :.+$",
-                msg,
-            )
-            if is_privmsg:
-                data = {
-                    "channel": re.findall(
-                        r"^:.+![a-zA-Z0-9_]+"
-                        r"@[a-zA-Z0-9_]+"
-                        r".+ "
-                        r"PRIVMSG (.*?) :",
-                        msg,
-                    )[0],
-                    "timestamp": message.timestamp,
-                    "nick": re.findall(r"^:([a-zA-Z0-9_]+)!", msg)[0],
-                    "message": re.findall(r"PRIVMSG #[a-zA-Z0-9_]+ :(.+)\r\n$", msg)[0],
-                }
-                self.buffer_data.append(data)
-                if len(self.buffer_data) > 500:
-                    await push_to_db(self.buffer_data)
-                    self.buffer_data = []
+            messages = message.body.split(b"\r\n")
+            for msg in messages:
+                if msg.startswith(b"SUBSCRIBE"):
+                    print("got new subscriber")
+                    id_subscribers = str(msg.split(b" ")[1], "utf-8")
+                    self.subscribers[id_subscribers] = SubscriberInfo()
+                msg_utf8 = msg.decode()
+                is_privmsg = re.match(
+                    r"^:[a-zA-Z0-9_]+\![a-zA-Z0-9_]+@[a-zA-Z0-9_]+"
+                    r"\.tmi\.twitch\.tv "
+                    r"PRIVMSG #[a-zA-Z0-9_]+ :.+$",
+                    msg_utf8,
+                )
+                if is_privmsg:
+                    data = {
+                        "channel": re.findall(
+                            r"^:.+![a-zA-Z0-9_]+"
+                            r"@[a-zA-Z0-9_]+"
+                            r".+ "
+                            r"PRIVMSG (.*?) :",
+                            msg_utf8,
+                        )[0],
+                        "timestamp": message.timestamp,
+                        "nick": re.findall(r"^:([a-zA-Z0-9_]+)!", msg_utf8)[0],
+                        "message": re.findall(
+                            r"PRIVMSG #[a-zA-Z0-9_]+ :(.+)$", msg_utf8
+                        )[0],
+                    }
+                    self.buffer_data.append(data)
+                    if len(self.buffer_data) > 1500:
+                        await push_to_db(self.buffer_data)
+                        self.buffer_data = []
 
     async def consumer(self) -> None:
-        connection = await connect("amqp://admin:admin@localhost")
+        connection = await connect(
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@localhost"
+        )
 
         async with connection:
             # Creating a channel
@@ -123,7 +140,9 @@ class Orchestrator:
 
     async def producer(self) -> None:
         # Perform connection
-        connection = await connect("amqp://admin:admin@localhost")
+        connection = await connect(
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@localhost"
+        )
         async with connection:
             # Creating a channel
             channel = await connection.channel()

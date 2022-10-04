@@ -1,0 +1,8 @@
+FROM python:3.10.7-buster
+
+RUN mkdir /app
+WORKDIR /app
+COPY .env requirements-consumer.txt generate_pickle.py launch.sh consumer.py /app/
+
+RUN pip install -r requirements-consumer.txt
+CMD ["bash", "launch.sh"]

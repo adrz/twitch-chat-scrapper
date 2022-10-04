@@ -23,4 +23,4 @@ python consumer.py --num 5000 --count 1000 &
 python consumer.py --num 6000 --count 1000 &
 python consumer.py --num 7000 --count 1000 &
 python consumer.py --num 8000 --count 1000 &
-python consumer.py --num 9000 --count 1000 &
+python consumer.py --num 9000 --count 1000

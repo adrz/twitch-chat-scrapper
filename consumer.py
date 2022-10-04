@@ -1,13 +1,20 @@
 import argparse
 import asyncio
 import datetime
+import os
 import random
 import string
+import time
 from dataclasses import dataclass, field
 from typing import List
 
 from aio_pika import DeliveryMode, Message, connect
 from aio_pika.abc import AbstractIncomingMessage
+from dotenv import load_dotenv
+
+load_dotenv()
+RABBITMQ_USERNAME = os.getenv("RABBITMQ_USERNAME")
+RABBITMQ_PASSWORD = os.getenv("RABBITMQ_PASSWORD")
 
 
 @dataclass
@@ -25,6 +32,7 @@ class Subscriber:
     n_channels: int = 0
     n_messages_last: int = 0
     last_message: bytes = b""
+    buffer: list = field(default_factory=list)
 
     async def send(self, message: str) -> None:
         self.writer.write(f"{message}\r\n".encode())
@@ -90,13 +98,17 @@ class Subscriber:
 
         while True:
             data = await self.reader.readuntil(b"\r\n")
+            self.buffer.append(data)
             self.n_messages += 1
             print(data)
             if data.startswith(b"PING"):
                 parsed = data.decode().split(" ")[-1]
                 await self.send(f"PONG {parsed}")
             else:
-                await self.produce(data)
+                if len(self.buffer) > 5:
+                    data_to_produce = b"".join(self.buffer)
+                    await self.produce(data_to_produce)
+                    self.buffer = []
 
     async def infinite_read_chat(self):
         n_failure = 0
@@ -111,14 +123,16 @@ class Subscriber:
                 continue
 
     async def produce(self, message_body) -> None:
-        connection = await connect("amqp://admin:admin@localhost")
+        connection = await connect(
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@0.0.0.0"
+        )
         async with connection:
             # Creating a channel
             channel = await connection.channel()
 
             message = Message(
                 message_body,
-                timestamp=datetime.datetime.now(),
+                timestamp=datetime.datetime.utcnow(),
                 headers={"x-id": self._id},
                 delivery_mode=DeliveryMode.PERSISTENT,
             )
@@ -132,7 +146,9 @@ class Subscriber:
             print(f" [x] Sent {message_body!r}")
 
     async def consume(self) -> None:
-        connection = await connect("amqp://admin:admin@localhost")
+        connection = await connect(
+            f"amqp://{RABBITMQ_USERNAME}:{RABBITMQ_PASSWORD}@localhost"
+        )
 
         async with connection:
             # Creating a channel
@@ -167,7 +183,11 @@ class Subscriber:
                 )
                 loop.run_until_complete(cors)
             except Exception as exp:
-                print("Error")
+                print("Error: ", exp)
+                time.sleep(1)
+                self.nickname = "justinfan" + "".join(
+                    [random.choice(string.digits) for _ in range(10)]
+                )
                 continue
         loop.close()
 
@@ -178,11 +198,16 @@ if __name__ == "__main__":
     # channels = args.parse_args().channels.split(",")
     args.add_argument("--num", type=int, default=0)
     args.add_argument("--count", type=int, default=100)
+    args.add_argument("--channel", type=str, default="")
+    channel = args.parse_args().channel
     import pickle
 
     data = pickle.load(open("channels.pkl", "rb"))
-    channels = data[
-        args.parse_args().num : args.parse_args().num + args.parse_args().count
-    ]
+    if channel:
+        channels = [channel]
+    else:
+        channels = data[
+            args.parse_args().num : args.parse_args().num + args.parse_args().count
+        ]
     subscriber = Subscriber(channels=channels)
     subscriber.run()

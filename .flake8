@@ -1,0 +1,4 @@
+[flake8]
+max-line-length = 88
+select = C,E,F,W,B,B950
+ignore = WPS111,WPS305,WPS432,WPS358,WPS323,WPS226,WPS348,C812,E203,E20
