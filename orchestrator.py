@@ -57,7 +57,6 @@ class Stats(Base):
 
 async def push_to_db(data):
     list_private_messages = [PrivateMessage(**d) for d in data]
-    print("pushing to db")
     async with async_session() as session:
         async with session.begin():
             session.add_all(list_private_messages)
@@ -100,17 +99,9 @@ class Orchestrator:
                     self.subscribers[id_subscribers] = SubscriberInfo()
                 if msg.startswith(b"STATS"):
                     try:
-                        print("got new stats")
                         id_subscribers = message.headers["x-id"]
                         msg_split = msg.split(b" ")
-                        print(msg_split)
                         n_msg = str(msg_split[1], "utf-8")
-                        timestamp = message.timestamp
-                        print(
-                            f"subscriber id: {id_subscribers}, "
-                            f"{timestamp}, n messages: {n_msg}"
-                        )
-                        print("ok")
                         stats = {
                             "consumer_id": id_subscribers,
                             "n_message": int(n_msg),
