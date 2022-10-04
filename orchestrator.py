@@ -65,7 +65,6 @@ async def push_to_db(data):
 
 async def push_to_db_stats(data):
     stats = Stats(**data)
-    print("pushing statsto db")
     async with async_session() as session:
         async with session.begin():
             session.add(stats)
