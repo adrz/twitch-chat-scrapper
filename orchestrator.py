@@ -40,26 +40,36 @@ class PrivateMessage(Base):
     timestamp = Column(DateTime)
     channel = Column(String)
     nick = Column(String)
-
     # required in order to access columns with server defaults
     # or SQL expression defaults, subsequent to a flush, without
     # triggering an expired load
     __mapper_args__ = {"eager_defaults": True}
 
 
+class Stats(Base):
+    __tablename__ = "stats"
+    id = Column(Integer, primary_key=True)
+    n_message = Column(Integer)
+    timestamp = Column(DateTime)
+    consumer_id = Column(String)
+    __mapper_args__ = {"eager_defaults": True}
+
+
 async def push_to_db(data):
-    # print(data)
-    # tweet = PrivateMessage(
-    #     timestamp=data["timestamp"],
-    #     channel=data["channel"],
-    #     nick=data["username"],
-    #     message=data["message"],
-    # )
     list_private_messages = [PrivateMessage(**d) for d in data]
     print("pushing to db")
     async with async_session() as session:
         async with session.begin():
             session.add_all(list_private_messages)
+            await session.commit()
+
+
+async def push_to_db_stats(data):
+    stats = Stats(**data)
+    print("pushing statsto db")
+    async with async_session() as session:
+        async with session.begin():
+            session.add(stats)
             await session.commit()
 
 
@@ -88,6 +98,28 @@ class Orchestrator:
                     print("got new subscriber")
                     id_subscribers = str(msg.split(b" ")[1], "utf-8")
                     self.subscribers[id_subscribers] = SubscriberInfo()
+                if msg.startswith(b"STATS"):
+                    try:
+                        print("got new stats")
+                        id_subscribers = message.headers["x-id"]
+                        msg_split = msg.split(b" ")
+                        print(msg_split)
+                        n_msg = str(msg_split[1], "utf-8")
+                        timestamp = message.timestamp
+                        print(
+                            f"subscriber id: {id_subscribers}, "
+                            f"{timestamp}, n messages: {n_msg}"
+                        )
+                        print("ok")
+                        stats = {
+                            "consumer_id": id_subscribers,
+                            "n_message": int(n_msg),
+                            "timestamp": message.timestamp,
+                        }
+                        await push_to_db_stats(stats)
+                    except Exception as exc:
+                        print(exc)
+                        continue
                 msg_utf8 = msg.decode()
                 is_privmsg = re.match(
                     r"^:[a-zA-Z0-9_]+\![a-zA-Z0-9_]+@[a-zA-Z0-9_]+"

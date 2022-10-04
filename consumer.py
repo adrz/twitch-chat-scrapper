@@ -38,6 +38,14 @@ class Subscriber:
         self.writer.write(f"{message}\r\n".encode())
         await self.writer.drain()
 
+    async def notifications(self):
+        while True:
+            await asyncio.sleep(10)
+            diff = self.n_messages - self.n_messages_last
+            self.n_messages_last = self.n_messages
+            message_body = f"STATS {diff}".encode()
+            await self.produce(message_body)
+
     async def connect(self) -> None:
         exp = 0
         connected = False
@@ -72,21 +80,6 @@ class Subscriber:
 
         # await self.send("CAP REQ :twitch.tv/tags")
         # await self.send("CAP REQ :twitch.tv/membership")
-
-    async def notifications(self):
-        while True:
-            await asyncio.sleep(10)
-            # print(f"Messages: {self.n_messages}")
-            print(f"timestamp: {datetime.datetime.now()}")
-            print(f"Channels: {self.n_channels}")
-            diff = self.n_messages - self.n_messages_last
-            print(f"Diff: {diff}")
-            # print(f"last message: {self.last_message}")
-            self.n_messages_last = self.n_messages
-            if not diff:
-                print("No messages received in the last 5 seconds")
-                print("Reconnecting...")
-                # raise ValueError("stop")
 
     async def pong(self) -> None:
         if self.is_connected:
@@ -179,6 +172,7 @@ class Subscriber:
                     self.produce(f"SUBSCRIBE: {self._id}".encode()),
                     self.consume(),
                     self.connect(),
+                    self.notifications(),
                     self.infinite_read_chat(),
                 )
                 loop.run_until_complete(cors)
@@ -199,7 +193,9 @@ if __name__ == "__main__":
     args.add_argument("--num", type=int, default=0)
     args.add_argument("--count", type=int, default=100)
     args.add_argument("--channel", type=str, default="")
+    args.add_argument("--id", type=str, default="")
     channel = args.parse_args().channel
+    id_consumer = args.parse_args().id
     import pickle
 
     data = pickle.load(open("channels.pkl", "rb"))
@@ -209,5 +205,8 @@ if __name__ == "__main__":
         channels = data[
             args.parse_args().num : args.parse_args().num + args.parse_args().count
         ]
-    subscriber = Subscriber(channels=channels)
+    if id_consumer:
+        subscriber = Subscriber(channels=channels, _id=id_consumer)
+    else:
+        subscriber = Subscriber(channels=channels)
     subscriber.run()
